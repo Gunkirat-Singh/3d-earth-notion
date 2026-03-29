@@ -1,65 +1,76 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
     <style>
         body { margin: 0; background-color: #000; overflow: hidden; }
-        canvas { width: 100vw; height: 100vh; display: block; }
+        canvas { width: 100vw; height: 100vh; display: block; cursor: grab; }
+        canvas:active { cursor: grabbing; }
     </style>
 </head>
 <body>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/controls/OrbitControls.js"></script>
 
     <script>
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
         document.body.appendChild(renderer.domElement);
 
-        // --- LIGHTING (Essential for 'Real' Textures) ---
-        const ambientLight = new THREE.AmbientLight(0xffffff, 1.5); // Brightens the whole globe
+        // --- ENHANCED LIGHTING ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1.2); 
         scene.add(ambientLight);
-        
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-        directionalLight.position.set(5, 3, 5); // Adds a "Sun" effect from the side
-        scene.add(directionalLight);
+        const sunLight = new THREE.DirectionalLight(0xffffff, 1);
+        sunLight.position.set(5, 3, 5);
+        scene.add(sunLight);
+
+        // --- ZOOM & ROTATION CONTROLS ---
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true; // Smooth movement
+        controls.dampingFactor = 0.05;
+        controls.enablePan = false; // Keep it centered
+        controls.minDistance = 3;   // Max Zoom In
+        controls.maxDistance = 15;  // Max Zoom Out
 
         let earth;
         let isHovered = false;
 
-        // --- LOADING THE MODEL ---
+        // --- LOADING YOUR MODEL ---
         const loader = new THREE.GLTFLoader();
-        // Using your specific GitHub Raw Link
-        const modelUrl = 'https://github.com/Gunkirat-Singh/3d-earth-notion/raw/refs/heads/main/earth.glb';
-
-        loader.load(modelUrl, function (gltf) {
+        // This looks for 'earth.glb' in the same folder on GitHub
+        loader.load('earth.glb', function (gltf) {
             earth = gltf.scene;
             
-            // Adjust scale if the Earth looks too small or big
-            earth.scale.set(2.5, 2.5, 2.5); 
+            // Initial sizing
+            earth.scale.set(2.5, 2.5, 2.5);
             
-            // Center the model
+            // Center the model geometry
             const box = new THREE.Box3().setFromObject(earth);
             const center = box.getCenter(new THREE.Vector3());
             earth.position.sub(center);
             
             scene.add(earth);
-        }, undefined, function (error) {
-            console.error('Error loading the Earth model:', error);
         });
 
-        camera.position.z = 6;
+        camera.position.z = 8;
 
-        // --- INTERACTION ---
+        // --- HOVER LOGIC ---
         renderer.domElement.addEventListener('mouseenter', () => { isHovered = true; });
         renderer.domElement.addEventListener('mouseleave', () => { isHovered = false; });
 
         function animate() {
             requestAnimationFrame(animate);
+            
+            // Auto-rotate only on hover
             if (earth && isHovered) {
-                earth.rotation.y += 0.008; // Spins when you touch it
+                earth.rotation.y += 0.005;
             }
+
+            controls.update(); // Required for smooth zoom
             renderer.render(scene, camera);
         }
         animate();
