@@ -3,7 +3,8 @@
 <head>
     <style>
         body { margin: 0; background-color: #000000; overflow: hidden; }
-        canvas { width: 100vw; height: 100vh; display: block; }
+        /* Ensures the canvas fills the embed frame precisely */
+        canvas { width: 100%; height: 100%; display: block; }
     </style>
 </head>
 <body>
@@ -14,36 +15,57 @@
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         
         renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio); // Sharpens on high-res screens
         document.body.appendChild(renderer.domElement);
 
-        // Creating a Wireframe Sphere (The Earth)
+        // 1. Earth Wireframe Sphere
         const geometry = new THREE.SphereGeometry(2, 24, 24);
         const material = new THREE.MeshBasicMaterial({ 
             color: 0xffffff, 
             wireframe: true,
             transparent: true,
-            opacity: 0.2 
+            opacity: 0.1 // subtle background mesh
         });
-        const earth = new THREE.Mesh(geometry, material);
-        scene.add(earth);
+        const earthMesh = new THREE.Mesh(geometry, material);
+        scene.add(earthMesh);
 
-        // Adding "Points" to make it look like data
-        const pointsGeometry = new THREE.SphereGeometry(2.02, 32, 32);
+        // 2. Data Points Layer (to represent financial hubs)
+        const pointsGeometry = new THREE.SphereGeometry(2.03, 30, 30);
         const pointsMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.02 });
         const earthPoints = new THREE.Points(pointsGeometry, pointsMaterial);
         scene.add(earthPoints);
 
         camera.position.z = 5;
 
+        // Hover Interaction State
+        let isHovered = false;
+
+        // --- Interaction Event Listeners ---
+        // When mouse enters the Notion embed block
+        renderer.domElement.addEventListener('mouseenter', () => { isHovered = true; });
+        
+        // When mouse leaves the Notion embed block
+        renderer.domElement.addEventListener('mouseleave', () => { isHovered = false; });
+
         // Animation Loop
         function animate() {
             requestAnimationFrame(animate);
-            earth.rotation.y += 0.002; // Slow "OS" rotation
-            earthPoints.rotation.y += 0.002;
+
+            // Conditional Rotation: Only spin if mouse is over it
+            if (isHovered) {
+                const spinSpeed = 0.01; // "Interactive" speed
+                earthMesh.rotation.y += spinSpeed;
+                earthPoints.rotation.y += spinSpeed;
+            } else {
+                // Completely static when not hovered
+                earthMesh.rotation.y += 0;
+                earthPoints.rotation.y += 0;
+            }
+
             renderer.render(scene, camera);
         }
 
-        // Handle Resizing
+        // Handle Resizing (Keeps globe centered when scaling block)
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
