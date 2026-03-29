@@ -2,77 +2,73 @@
 <html>
 <head>
     <style>
-        body { margin: 0; background-color: #000000; overflow: hidden; }
-        /* Ensures the canvas fills the embed frame precisely */
-        canvas { width: 100%; height: 100%; display: block; }
+        body { margin: 0; background-color: #000; overflow: hidden; }
+        canvas { width: 100vw; height: 100vh; display: block; }
     </style>
 </head>
 <body>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/loaders/GLTFLoader.js"></script>
+
     <script>
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-        
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio); // Sharpens on high-res screens
         document.body.appendChild(renderer.domElement);
 
-        // 1. Earth Wireframe Sphere
-        const geometry = new THREE.SphereGeometry(2, 24, 24);
-        const material = new THREE.MeshBasicMaterial({ 
-            color: 0xffffff, 
-            wireframe: true,
-            transparent: true,
-            opacity: 0.1 // subtle background mesh
-        });
-        const earthMesh = new THREE.Mesh(geometry, material);
-        scene.add(earthMesh);
+        // --- LIGHTING (Essential for 'Real' Textures) ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1.5); // Brightens the whole globe
+        scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        directionalLight.position.set(5, 3, 5); // Adds a "Sun" effect from the side
+        scene.add(directionalLight);
 
-        // 2. Data Points Layer (to represent financial hubs)
-        const pointsGeometry = new THREE.SphereGeometry(2.03, 30, 30);
-        const pointsMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.02 });
-        const earthPoints = new THREE.Points(pointsGeometry, pointsMaterial);
-        scene.add(earthPoints);
-
-        camera.position.z = 5;
-
-        // Hover Interaction State
+        let earth;
         let isHovered = false;
 
-        // --- Interaction Event Listeners ---
-        // When mouse enters the Notion embed block
+        // --- LOADING THE MODEL ---
+        const loader = new THREE.GLTFLoader();
+        // Using your specific GitHub Raw Link
+        const modelUrl = 'https://github.com/Gunkirat-Singh/3d-earth-notion/raw/refs/heads/main/earth.glb';
+
+        loader.load(modelUrl, function (gltf) {
+            earth = gltf.scene;
+            
+            // Adjust scale if the Earth looks too small or big
+            earth.scale.set(2.5, 2.5, 2.5); 
+            
+            // Center the model
+            const box = new THREE.Box3().setFromObject(earth);
+            const center = box.getCenter(new THREE.Vector3());
+            earth.position.sub(center);
+            
+            scene.add(earth);
+        }, undefined, function (error) {
+            console.error('Error loading the Earth model:', error);
+        });
+
+        camera.position.z = 6;
+
+        // --- INTERACTION ---
         renderer.domElement.addEventListener('mouseenter', () => { isHovered = true; });
-        
-        // When mouse leaves the Notion embed block
         renderer.domElement.addEventListener('mouseleave', () => { isHovered = false; });
 
-        // Animation Loop
         function animate() {
             requestAnimationFrame(animate);
-
-            // Conditional Rotation: Only spin if mouse is over it
-            if (isHovered) {
-                const spinSpeed = 0.01; // "Interactive" speed
-                earthMesh.rotation.y += spinSpeed;
-                earthPoints.rotation.y += spinSpeed;
-            } else {
-                // Completely static when not hovered
-                earthMesh.rotation.y += 0;
-                earthPoints.rotation.y += 0;
+            if (earth && isHovered) {
+                earth.rotation.y += 0.008; // Spins when you touch it
             }
-
             renderer.render(scene, camera);
         }
+        animate();
 
-        // Handle Resizing (Keeps globe centered when scaling block)
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
-
-        animate();
     </script>
 </body>
 </html>
